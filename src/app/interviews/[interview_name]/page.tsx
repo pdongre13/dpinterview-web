@@ -395,7 +395,7 @@ export default function Page({
                             {interviews.parts.map((part, index) => (
                                 <TreeItem key={index} itemId={'p_' + part.interview_path} label={(part as any).part_name}>
                                     {part.interview_files.map((file, fileIndex) => (
-                                        <TreeItem key={fileIndex} itemId={file.interview_file.file_path} label={(file as any).relative_path} />
+                                        <TreeItem key={fileIndex} itemId={file.interview_file.file_path} label={((file as any).relative_path ?? file.interview_file.file_name ?? '').replace('.lock', '').replace('.mkv', '.mp4')} />
                                     ))}
                                 </TreeItem>
                             ))}

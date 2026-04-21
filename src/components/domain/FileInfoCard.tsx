@@ -153,7 +153,10 @@ async function toggleIgnored(props: FileInfoCardProps): Promise<void> {
 
 export default function FileInfoCard(props: FileInfoCardProps) {
     const { currentAudioTime } = props;
-
+    // ← ADD THIS (line 156)
+    const [playbackPath, setPlaybackPath] = React.useState<string | null>(null);
+    // React.useEffect(() => { console.log('playbackPath:', playbackPath); }, [playbackPath]); // ← ADD THIS
+    
     React.useEffect(() => {
         if (currentAudioTime) {
             // Get player element
@@ -167,6 +170,20 @@ export default function FileInfoCard(props: FileInfoCardProps) {
         }
     }
     , [currentAudioTime]);
+
+    // ← ADD THIS BLOCK after the existing useEffect (after line 169)
+    React.useEffect(() => {
+        if (!props.file_path) return;
+
+        fetch(`/api/v1/interview-files/decrypted?file_path=${encodeURIComponent(props.file_path)}`)
+            .then(res => res.json())
+            .then(data => {
+                setPlaybackPath(data.destination_path ?? props.file_path);
+            })
+            .catch(() => {
+                setPlaybackPath(props.file_path);
+            });
+    }, [props.file_path]);
 
     // file_path = '/mnt/ProNET/Lochness/PHOENIX/PROTECTED/PronetXX/raw/XXXXXXX/interviews/open/YYYY-MM-DD 12.00.00 RENAME BL NLP/Audio Record/audio.m4a'
     // const file_path_pretty: string | null = props.file_path ? 'PHOENIX' + (props.file_path.split('PHOENIX')[1] || props.file_path) : null;
@@ -243,7 +260,9 @@ export default function FileInfoCard(props: FileInfoCardProps) {
                 isAudio = true;
                 icon = <AudioFile />;
                 color = 'primary';
-                render_element = 'audio';
+                if (render_element !== 'video') {  // ← only set audio if not already video
+                    render_element = 'audio';
+                }
             } else if (props.tags[i].toLowerCase().includes('diarized')) {
                 icon = <People />;
                 color = 'info';
@@ -348,11 +367,11 @@ export default function FileInfoCard(props: FileInfoCardProps) {
         <div>
 
             <div className="flex justify-center my-4">
-                {props.file_path && (
+                {props.file_path && playbackPath && (
                     render_element === 'audio' ? (
                         <audio
                             id="player"
-                            src={`http://localhost:45000/payload=%5B${props.file_path}%5D`}
+                            src={playbackPath ? `http://localhost:45000/payload=%5B${playbackPath}%5D` : undefined}
                             controls
                             style={{ width: '100%' }}
                             onError={() => {
@@ -368,7 +387,7 @@ export default function FileInfoCard(props: FileInfoCardProps) {
                     ) : (
                         <video
                             id="player"
-                            src={`http://localhost:45000/payload=%5B${props.file_path}%5D`}
+                            src={playbackPath ? `http://localhost:45000/payload=%5B${playbackPath}%5D` : undefined}
                             controls
                             onError={() => {
                                 toast.error("Failed to load video file. The file may be missing or the media server is not running.");

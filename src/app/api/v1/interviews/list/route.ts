@@ -17,7 +17,26 @@ export async function GET(request: Request): Promise<Response> {
     const limit = url.searchParams.get('limit') || 5;
     const offset = url.searchParams.get('offset') || 0;
 
-    let baseQuery = "SELECT * FROM interviews";
+    // let baseQuery = "SELECT * FROM interviews";
+    
+    let baseQuery = `
+        SELECT
+            interviews.interview_name,
+            interviews.interview_type,
+            interviews.subject_id,
+            interviews.study_id,
+            MIN(interview_parts.interview_day) as interview_day,
+            MIN(interview_parts.interview_datetime) as interview_datetime
+        FROM interviews
+        LEFT JOIN interview_parts ON interviews.interview_name = interview_parts.interview_name
+        AND interview_parts.is_primary = true
+        GROUP BY
+            interviews.interview_name,
+            interviews.interview_type,
+            interviews.subject_id,
+            interviews.study_id
+    `;
+    
     const params: any[] = [];
     let paramIndex = 1;
 
