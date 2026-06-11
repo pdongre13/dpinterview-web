@@ -120,6 +120,9 @@ export default function Page({
         null,
     );
     const [currentAudioTime, setCurrentAudioTime] = React.useState<number>(0);
+    
+    const [version1, setVersion1] = React.useState<string>('omni');
+    const [version2, setVersion2] = React.useState<string>('parakeet');
 
 
     useEffect(() => {
@@ -362,7 +365,7 @@ export default function Page({
                             {interviews.parts.map((part, index) => (
                                 <TreeItem key={index} itemId={'p_' + part.interview_path} label={(part as any).part_name}>
                                     {part.interview_files.map((file, fileIndex) => (
-                                        <TreeItem key={fileIndex} itemId={file.interview_file.file_path} label={(file as any).relative_path} />
+                                        <TreeItem key={fileIndex} itemId={file.interview_file.file_path} label={((file as any).relative_path ?? file.interview_file.file_name ?? '').replace('.lock', '')} />
                                     ))}
                                 </TreeItem>
                             ))}
@@ -408,11 +411,53 @@ export default function Page({
                                     <InterviewPdfReport interviewName={interview_name} />
                                 </TabPanel>
                                 <TabPanel value={4}>
-                                    <Transcript 
-                                        identifier={interview_name} identifier_type='interview' 
-                                        currentAudioTime={currentAudioTime}
-                                        updateAudioTime={setCurrentAudioTime}
-                                    />
+                                    <div className="flex gap-4 w-full">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-2 px-4 pt-4">
+                                                <p className="text-sm font-semibold text-gray-600">Version 1</p>
+                                                <select
+                                                    defaultValue="omni"
+                                                    onChange={(e) => setVersion1(e.target.value)}
+                                                    className="text-xs border rounded px-2 py-1 text-gray-600"
+                                                >
+                                                    <option value="omni">Omni</option>
+                                                    <option value="parakeet">Parakeet</option>
+                                                    <option value="whisper">Whisper</option>
+                                                    <option value="transcribeme">TranscribeMe</option>
+                                                </select>
+                                            </div>
+                                            <Transcript
+                                                identifier={interview_name}
+                                                identifier_type='interview'
+                                                version={version1}
+                                                currentAudioTime={currentAudioTime}
+                                                updateAudioTime={setCurrentAudioTime}
+                                            />
+                                        </div>
+                                        <div className="w-px bg-gray-200 self-stretch" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-2 px-4 pt-4">
+                                                <p className="text-sm font-semibold text-gray-600">Version 2</p>
+                                                <select
+                                                    defaultValue="parakeet"
+                                                    onChange={(e) => setVersion2(e.target.value)}
+                                                    className="text-xs border rounded px-2 py-1 text-gray-600"
+                                                >
+                                                    <option value="omni">Omni</option>
+                                                    <option value="parakeet">Parakeet</option>
+                                                    <option value="whisper">Whisper</option>
+                                                    <option value="transcribeme">TranscribeMe</option>
+                                                </select>
+                                            </div>
+                                            <Transcript
+                                                identifier={interview_name}
+                                                identifier_type='interview'
+                                                version={version2}
+                                                currentAudioTime={currentAudioTime}
+                                                updateAudioTime={setCurrentAudioTime}
+                                            />
+                                        </div>
+                                    </div>
                                 </TabPanel>
                             </Tabs>
                         </Box>

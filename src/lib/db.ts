@@ -9,9 +9,7 @@ if (!connection) {
         database: process.env.PG_database,
         password: process.env.PG_password,
         port: process.env.PG_port ? parseInt(process.env.PG_port, 10) : undefined,
-        ssl: {
-            rejectUnauthorized: false,
-        }
+        ssl: process.env.PG_ssl === 'false' ? false : { rejectUnauthorized: false },
     });
 }
 

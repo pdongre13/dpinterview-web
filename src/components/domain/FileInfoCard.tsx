@@ -122,6 +122,27 @@ function setRole(
 
 export default function FileInfoCard(props: FileInfoCardProps) {
     const { currentAudioTime } = props;
+    const [playbackPath, setPlaybackPath] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!props.file_path || !props.interview_name) return;
+
+        const fileName = props.file_path.split('/').pop() || '';
+        const parentFolder = props.file_path.split('/').slice(-2, -1)[0] || '';
+
+        fetch(`/api/v1/interview-files/decrypted?interview_name=${props.interview_name}&parent_folder=${parentFolder}&file_name=${encodeURIComponent(fileName)}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data && data.decrypted_path) {
+                    setPlaybackPath(data.decrypted_path);
+                } else {
+                    setPlaybackPath(props.file_path);
+                }
+            })
+            .catch(() => {
+                setPlaybackPath(props.file_path);
+            });
+    }, [props.file_path, props.interview_name]);
 
     React.useEffect(() => {
         if (currentAudioTime) {
@@ -279,11 +300,11 @@ export default function FileInfoCard(props: FileInfoCardProps) {
         <div>
 
             <div className="flex justify-center my-4">
-                {props.file_path && (
+                {props.file_path && playbackPath && (
                     render_element === 'audio' ? (
                         <audio
                             id="player"
-                            src={`http://localhost:45000/payload=%5B${props.file_path}%5D`}
+                            src={playbackPath ? `/api/v1/interview-files/stream?file_path=${encodeURIComponent(playbackPath)}` : ''}
                             controls
                             style={{ width: '100%' }}
                             onError={() => {
@@ -299,7 +320,7 @@ export default function FileInfoCard(props: FileInfoCardProps) {
                     ) : (
                         <video
                             id="player"
-                            src={`http://localhost:45000/payload=%5B${props.file_path}%5D`}
+                            src={playbackPath ? `/api/v1/interview-files/stream?file_path=${encodeURIComponent(playbackPath)}` : ''}
                             controls
                             onError={() => {
                                 toast.error("Failed to load video file. The file may be missing or the media server is not running.");

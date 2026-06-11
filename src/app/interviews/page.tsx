@@ -7,7 +7,7 @@ import Alert from '@mui/joy/Alert';
 import { GridColDef } from '@mui/x-data-grid';
 import { Dashboard } from '@mui/icons-material';
 
-import { DbInterview } from '@/lib/types/interview';
+import { DbInterview, DbInterviewEnhanced } from '@/lib/types/interview';
 import MuiDataGrid, { MuiDataGridProps } from '@/components/mui/MuiDataGrid';
 
 export default function Interviews() {
@@ -25,21 +25,31 @@ export default function Interviews() {
         { field: 'interview_type', headerName: 'Interview Type', width: 150 },
         { field: 'subject_id', headerName: 'Subject ID', width: 150 },
         { field: 'study_id', headerName: 'Study ID', width: 150 },
+        { field: 'interview_day', headerName: 'Day', width: 80 },
+        {
+            field: 'interview_datetime',
+            headerName: 'Interview Date',
+            width: 180,
+            renderCell: (params) => (
+                params.value
+                    ? new Date(params.value).toLocaleDateString()
+                    : 'N/A'
+            )
+        },
     ], []);
 
     React.useEffect(() => {
-        // Fetch data from the API
         fetch('/api/v1/interviews/list?limit=20000')
             .then((res) => res.json())
             .then((data) => {
-
-                // parse to grid rows
-                const gridRows = data.rows.map((interview: DbInterview) => ({
+                const gridRows = data.rows.map((interview: DbInterviewEnhanced) => ({
                     id: interview.interview_name,
                     interview_name: interview.interview_name,
                     interview_type: interview.interview_type,
                     subject_id: interview.subject_id,
                     study_id: interview.study_id,
+                    interview_day: interview.interview_day,
+                    interview_datetime: interview.interview_datetime,
                 }));
 
                 const props: MuiDataGridProps = {

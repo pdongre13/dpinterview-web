@@ -1,3 +1,4 @@
+"use client"
 // Referece:
 // https://mui.com/x/react-data-grid/
 import * as React from 'react';

@@ -84,7 +84,9 @@ export async function GET(
     let vidoeStreamsTimestamp: Date | undefined = undefined;
     if (videoStreamCount > 0) {
         const videoStreams = await VideoStream.get(interview_name);
-        vidoeStreamsTimestamp = new Date(videoStreams[0].vs_timestamp);
+        if (videoStreams && videoStreams.length > 0 && videoStreams[0].vs_timestamp) {
+            vidoeStreamsTimestamp = new Date(videoStreams[0].vs_timestamp);
+        }
     }
 
     const openFaceCount = await OpenFace.getCount(interview_name);

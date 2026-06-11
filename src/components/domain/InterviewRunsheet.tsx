@@ -22,6 +22,7 @@ export default function InterviewRunsheet(props: InterviewRunsheetProps) {
     const [dataDictionary, setDataDictionary] = useState<DataDictionaryM[]>([]);
     const [formRecords, setFormRecords] = useState<Record<string, string | null>[]>([]);
     const [usingClosestRunsheet, setUsingClosestRunsheet] = useState(false);
+    const [noRunsheet, setNoRunsheet] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -33,6 +34,10 @@ export default function InterviewRunsheet(props: InterviewRunsheetProps) {
                 })
             }
             if (!response.ok) {
+                if (response.status === 404) {
+                    setNoRunsheet(true);
+                    return;
+                }
                 toast.message('Uh oh! Something went wrong.', {
                     description: `Request for runsheet failed - ${response.statusText}`,
                 })
@@ -218,6 +223,10 @@ export default function InterviewRunsheet(props: InterviewRunsheetProps) {
                             </div>
                         ))}
                     </div> */}
+                </div>
+            ) : noRunsheet ? (
+                <div className="bg-gray-50 border border-gray-200 rounded p-6 text-center text-gray-500">
+                    No runsheet data available
                 </div>
             ) : (
                 <Skeleton variant="rectangular" height={500} sx={{ mt: 2 }} />

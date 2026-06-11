@@ -50,13 +50,13 @@ export class DataDictionary {
         // Get Data Dictionary
         const dataDictionaryQuery = `
         SELECT
-            field_name,
-            form_name,
-            field_label,
-            field_type,
-            select_choices_or_calculations
+            "Variable / Field Name" as field_name,
+            "Form Name" as form_name,
+            "Field Label" as field_label,
+            "Field Type" as field_type,
+            "Choices, Calculations, OR Slider Labels" as select_choices_or_calculations
         FROM data_dictionary
-        WHERE form_name = $1
+        WHERE "Form Name" = $1
         `;
         const dataDictionaryResults = await connection.query(dataDictionaryQuery, [form_name]);
         const dataDictionaryRows = dataDictionaryResults.rows as DbDataDictionary[];

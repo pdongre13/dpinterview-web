@@ -48,11 +48,21 @@ export default function InterviewPdfReport(props: InterviewPdfReportProps) {
                 <Skeleton variant="rectangular" height={600} className='w-full' />
             ) : pdfFilePath ? (
                 <div className="flex flex-col">
-                    <iframe 
-                        src={pdfFilePath}
-                        className="w-full h-screen"
-                        title={`${interviewName} PDF Report`}
-                    />
+                    <div className="flex flex-col items-center gap-4 p-4">
+                        <a 
+                            href={pdfFilePath} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                        >
+                            Open PDF Report in New Tab
+                        </a>
+                        <iframe 
+                            src={pdfFilePath}
+                            className="w-full h-screen"
+                            title={`${interviewName} PDF Report`}
+                        />
+                    </div>
                 </div>
             ) : (
                 <div className='m-32'>

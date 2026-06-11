@@ -1,5 +1,4 @@
 import { getConnection } from "@/lib/db";
-
 import { DbFile } from "@/lib/types/file";
 import { DbTranscriptFiles, InterviewTranscriptFile } from "@/lib/types/interview";
 
@@ -16,7 +15,6 @@ export class TranscriptFiles {
             `,
             [interview_name]
         );
-
         return results.rows.map((row: DbTranscriptFiles & DbFile) => {
             const transcript_file_tags = row.transcript_file_tags.split(',').map((tag: string) => tag.trim());
             return {
@@ -39,15 +37,33 @@ export class TranscriptFiles {
         const results = await connection.query(
             `
             SELECT transcript_file FROM transcript_files
-            WHERE identifier_name =  $1
+            WHERE identifier_name = $1
             `,
             [interview_name]
         );
-
         if (results.rows.length === 0) {
             return null;
         }
-        const transcriptFile = results.rows[0].transcript_file;
-        return transcriptFile;
+        return results.rows[0].transcript_file;
+    }
+
+    static async getTranscriptFileByVersion(
+        interview_name: string,
+        version: string
+    ): Promise<string | null> {
+        const connection = getConnection();
+        const results = await connection.query(
+            `
+            SELECT transcript_file FROM transcript_files
+            WHERE identifier_name = $1
+            AND transcript_file_tags LIKE $2
+            LIMIT 1
+            `,
+            [interview_name, `%${version}%`]
+        );
+        if (results.rows.length === 0) {
+            return null;
+        }
+        return results.rows[0].transcript_file;
     }
 }

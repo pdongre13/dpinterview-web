@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-
 import { PdfReports } from "@/lib/models/PdfReports";
 
 export async function GET(
@@ -19,9 +18,20 @@ export async function GET(
         return NextResponse.json({ error: 'PDF report not found' }, { status: 404 });
     }
 
-    // Redirect to the Report file URL
-    // http://localhost:45000/payload=[<path>]
+    const encodedUrl = `http://localhost:45000/payload=%5B${encodeURIComponent(pdfReportData.pr_path)}%5D`;
+    
+    // Proxy the PDF through Next.js instead of redirecting
+    const pdfResponse = await fetch(encodedUrl);
+    if (!pdfResponse.ok) {
+        return NextResponse.json({ error: 'Failed to fetch PDF' }, { status: 500 });
+    }
 
-    const redirectUrl = new URL(`http://localhost:45000/payload=[${pdfReportData.pr_path}]`);
-    return NextResponse.redirect(redirectUrl);
+    const pdfBuffer = await pdfResponse.arrayBuffer();
+    
+    return new Response(pdfBuffer, {
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'inline',
+        },
+    });
 }

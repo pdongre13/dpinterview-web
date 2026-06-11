@@ -15,6 +15,7 @@ export type InterviewTranscriptProps = {
     identifier_type: string;
     study_id?: string;
     subject_id?: string;
+    version?: string;
     currentAudioTime?: number;
     updateAudioTime?: (time: number) => void;
 }
@@ -29,6 +30,53 @@ type ParsedLine = {
     tags?: string[];
 }
 
+function convertVttToTxt(vtt: string): string {
+    const lines = vtt.split('\n');
+    const result: string[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i].trim();
+
+        if (line === 'WEBVTT' || line === '' || /^\d+$/.test(line) || /^\d+\.$/.test(line) || /^NOTE/.test(line)) {
+            i++;
+            continue;
+        }
+
+        if (line.includes('-->')) {
+            const startTime = line.split('-->')[0].trim();
+            i++;
+            let speaker = 'S1';
+            let text = '';
+
+            while (i < lines.length && lines[i].trim() !== '') {
+                const textLine = lines[i].trim();
+                const speakerMatch = textLine.match(/^([A-Z_]+\d*):\s*(.*)/);
+                if (speakerMatch) {
+                    const rawSpeaker = speakerMatch[1];
+                    const speakerNum = rawSpeaker.match(/\d+/);
+                    if (speakerNum) {
+                        speaker = `S${parseInt(speakerNum[0]) + 1}`;
+                    }
+                    text += speakerMatch[2] + ' ';
+                } else {
+                    text += textLine + ' ';
+                }
+                i++;
+            }
+
+            if (text.trim()) {
+                result.push(`${speaker}: ${startTime} ${text.trim()}`);
+            }
+            continue;
+        }
+
+        i++;
+    }
+
+    return result.join('\n');
+}
+
 export default function Transcript(props: InterviewTranscriptProps) {
     const { identifier, identifier_type, study_id, subject_id, updateAudioTime } = props;
     const [transcriptData, setTranscriptData] = useState<string | null>(null);
@@ -40,11 +88,15 @@ export default function Transcript(props: InterviewTranscriptProps) {
     const [activeLinePercentComplete, setActiveLinePercentComplete] = useState<number>(100);
 
     useEffect(() => {
+        setLoading(true);
+        setMissing(false);
+        setParsedData([]);
+        setTranscriptData(null);
+
         const fetchInterviewData = async (interviewName: any) => {
-            // const response = await fetch(`http://localhost:45000/payload=[/mnt/ProNET/Lochness/PHOENIX/PROTECTED/PronetYA/processed/YA03473/interviews/open/transcripts/PronetYA_YA03473_interviewAudioTranscript_open_day0015_session001.txt]`);
-            const response = await fetch(`/api/v2/interviews/${interviewName}/transcript`);
+            const versionParam = props.version ? `?version=${props.version}` : '';
+            const response = await fetch(`/api/v2/interviews/${interviewName}/transcript${versionParam}`);
             if (!response.ok) {
-                // Check for 404
                 if (response.status === 404) {
                     toast.message('Uh oh! Transcript file not found.', {
                         description: 'Transcript file not found.',
@@ -60,16 +112,20 @@ export default function Transcript(props: InterviewTranscriptProps) {
                 return;
             }
 
-            // Parse / Read as text
             const text = await response.text();
-            setTranscriptData(text);
+
+            if (text.trimStart().startsWith('WEBVTT')) {
+                setTranscriptData(convertVttToTxt(text));
+            } else {
+                setTranscriptData(text);
+            }
+
             setLoading(false);
         };
 
         const fetchAudioJournalData = async (studyId: string, subjectId: string, journalName: any) => {
             const response = await fetch(`/api/v3/studies/${studyId}/subjects/${subjectId}/audioJournals/${journalName}/transcript`);
             if (!response.ok) {
-                // Check for 404
                 if (response.status === 404) {
                     toast.message('Uh oh! Transcript file not found.', {
                         description: 'Transcript file not found.',
@@ -84,7 +140,6 @@ export default function Transcript(props: InterviewTranscriptProps) {
                 setLoading(false);
                 return;
             }
-            // Parse / Read as text
             const text = await response.text();
             setTranscriptData(text);
             setLoading(false);
@@ -107,10 +162,9 @@ export default function Transcript(props: InterviewTranscriptProps) {
             toast.message('Uh oh! Invalid identifier_type.')
             return;
         }
-    }, [identifier, identifier_type]);
+    }, [identifier, identifier_type, props.version]);
 
     useEffect(() => {
-        // Highlight only the most recent parsed line, if currentAudioTime is within the time range of the line
         if (parsedData.length > 0 && props.currentAudioTime) {
             const currentTime = props.currentAudioTime;
             let lastHighlightedIndex = -1;
@@ -122,7 +176,7 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     }
                     return {
                         ...line,
-                        highlight: false, // Reset all highlights
+                        highlight: false,
                     };
                 }).map((line, index) => {
                     if (index === lastHighlightedIndex) {
@@ -134,7 +188,7 @@ export default function Transcript(props: InterviewTranscriptProps) {
                         }
                         return {
                             ...line,
-                            highlight: true, // Highlight only the most recent line
+                            highlight: true,
                         };
                     }
                     return line;
@@ -143,29 +197,11 @@ export default function Transcript(props: InterviewTranscriptProps) {
         }
     }, [props.currentAudioTime]);
 
-
     useEffect(() => {
         if (transcriptData) {
-            // Sample Data
-            // S1: 00:00:00.638 It's been a good week so far.
-            //
-            // S1: 00:00:03.088 Um, I am kind of on break, I guess you can say.
-            //
-            // S1: 00:00:09.564 Um, what else?
-            //
-            // S1 00:00:03.259 Ooh, okay.
-            //
-            // S2 00:00:04.676 Sweet. Awesome. Uh, so yeah. So just wanted to thank you again for taking the time to talk, um, with me, and in general, for being a part of this study. It means a lot to us. Um, so like I mentioned, this is going to be recorded, um, and this interview is just going to be to get to know you and learn what your life, uh, is like. So, um, how have things been going for you?
-            // 
-            // S1 00:00:28.819 Uh, things have been going good.
-            //
-            // S2 00:00:32.552 Yeah. In what ways have they been going good? 
-
             const lines: string[] = transcriptData.split('\n');
-            // Remove empty lines
             const nonEmptyLines = lines.filter(line => line.trim() !== '');
 
-            // parse into time, speaker, text
             const parsedLines: ParsedLine[] = nonEmptyLines.map((line) => {
                 const match = line.match(/^(S\d+):?\s*([\d:.]+)\s+(.*)/);
                 if (match) {
@@ -173,29 +209,25 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     const time_str = match[2];
                     const text = match[3];
 
-                    // Convert time string to seconds
                     const timeParts = time_str.split(':');
                     let time = 0;
                     if (timeParts.length === 3) {
-                        time += parseInt(timeParts[0], 10) * 3600; // hours
-                        time += parseInt(timeParts[1], 10) * 60; // minutes
-                        time += parseFloat(timeParts[2]); // seconds
+                        time += parseInt(timeParts[0], 10) * 3600;
+                        time += parseInt(timeParts[1], 10) * 60;
+                        time += parseFloat(timeParts[2]);
                     } else if (timeParts.length === 2) {
-                        time += parseInt(timeParts[0], 10) * 60; // minutes
-                        time += parseFloat(timeParts[1]); // seconds
+                        time += parseInt(timeParts[0], 10) * 60;
+                        time += parseFloat(timeParts[1]);
                     } else if (timeParts.length === 1) {
-                        time += parseFloat(timeParts[0]); // seconds
+                        time += parseFloat(timeParts[0]);
                     }
 
                     const tagsSet: Set<string> = new Set();
-                    // Check in string for text within '[]' for tags
                     const tags = text.match(/\[(.*?)\]/g);
                     if (tags) {
                         tags.forEach((tag) => {
-                            const cleanTag = tag.replace(/\[|\]/g, '').trim(); // Remove brackets
-
+                            const cleanTag = tag.replace(/\[|\]/g, '').trim();
                             const knownTags = ['inaudible', 'laughter', 'crosstalk'];
-
                             if (!knownTags.includes(cleanTag)) {
                                 tagsSet.add("uncertain");
                             } else {
@@ -203,7 +235,6 @@ export default function Transcript(props: InterviewTranscriptProps) {
                             }
                         });
                     }
-                    // Check if text in '{}' for redacted text
                     const redactedText = text.match(/\{(.*?)\}/g);
                     if (redactedText) {
                         tagsSet.add('redacted');
@@ -219,15 +250,13 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     text: line,
                     end_time_s: null,
                 }
-            }
-            );
+            });
 
-            // Set end_time_s as start_time_s of next line
             parsedLines.forEach((line, index) => {
                 if (index < parsedLines.length - 1) {
                     line.end_time_s = parsedLines[index + 1].start_time_s;
                 } else {
-                    line.end_time_s = null; // Last line has no end time
+                    line.end_time_s = null;
                 }
             });
 
@@ -240,18 +269,12 @@ export default function Transcript(props: InterviewTranscriptProps) {
         const container = scrollRef.current;
         if (!container) return;
 
-        // Ensure the container has overflow set to auto or scroll
-        // container.style.overflow = 'auto';
-
         const highlightedElement = container.querySelector('.active-line');
         if (highlightedElement) {
-            // Scroll only the container without affecting the parent
-            if (highlightedElement) {
-                container.scrollTo({
-                    top: highlightedElement.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - container.clientHeight / 2 + highlightedElement.clientHeight / 2,
-                    behavior: 'smooth',
-                });
-            }
+            container.scrollTo({
+                top: highlightedElement.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - container.clientHeight / 2 + highlightedElement.clientHeight / 2,
+                behavior: 'smooth',
+            });
         }
     }, [parsedData, enableAutoScroll])
 
@@ -330,7 +353,6 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     </div>
 
                     {transcriptData && (
-                        // Scroll to top button
                         <button
                             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                             className="fixed bottom-6 right-6 bg-slate-600 hover:bg-slate-700 text-white p-3 rounded-full shadow-lg transition-all"
@@ -345,7 +367,6 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     {Array(5).fill(0).map((_, i) => (
                         <div key={i} className="mb-6">
                             <Skeleton variant="text" width="30%" height={28} className="mb-2" />
-
                             {Array(2 + Math.floor(Math.random() * 4)).fill(0).map((_, j) => (
                                 <Skeleton
                                     key={j}
@@ -359,7 +380,6 @@ export default function Transcript(props: InterviewTranscriptProps) {
                     ))}
                 </div>
             )}
-
         </div>
     );
 }

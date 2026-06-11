@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-
 import { TranscriptFiles } from '@/lib/models/TranscriptFiles';
 
 export async function GET(
@@ -13,15 +12,40 @@ export async function GET(
         return NextResponse.json({ error: 'Missing interview_name parameter' }, { status: 400 });
     }
 
-    const transcriptFile = await TranscriptFiles.getTranscriptFile(interview_name);
+    const url = new URL(request.url);
+    const version = url.searchParams.get('version');
 
-    if (!transcriptFile) {
-        return NextResponse.json({ error: 'Transcript file not found' }, { status: 404 });
+    let transcriptFile: string | null = null;
+
+    if (version) {
+        transcriptFile = await TranscriptFiles.getTranscriptFileByVersion(
+            interview_name,
+            version
+        );
+    } else {
+        transcriptFile = await TranscriptFiles.getTranscriptFile(interview_name);
     }
 
-    // Redirect to the transcript file URL
-    // http://localhost:45000/payload=[<path>]
+    if (!transcriptFile) {
+        return NextResponse.json(
+            { error: 'Transcript file not found' },
+            { status: 404 }
+        );
+    }
 
-    const redirectUrl = new URL(`http://localhost:45000/payload=[${transcriptFile}]`);
-    return NextResponse.redirect(redirectUrl);
+    // Proxy through Next.js instead of redirecting to avoid CORS
+    const encodedUrl = `http://localhost:45000/payload=%5B${encodeURIComponent(transcriptFile)}%5D`;
+    
+    const transcriptResponse = await fetch(encodedUrl);
+    if (!transcriptResponse.ok) {
+        return NextResponse.json({ error: 'Failed to fetch transcript' }, { status: 500 });
+    }
+
+    const text = await transcriptResponse.text();
+
+    return new Response(text, {
+        headers: {
+            'Content-Type': 'text/plain',
+        },
+    });
 }
