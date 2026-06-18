@@ -16,6 +16,7 @@ export async function GET(request: Request): Promise<Response> {
             interviews.interview_type,
             interviews.subject_id,
             interviews.study_id,
+            interviews.interview_ra_md,
             MIN(interview_parts.interview_day) as interview_day,
             MIN(interview_parts.interview_datetime) as interview_datetime
         FROM interviews
@@ -46,7 +47,8 @@ export async function GET(request: Request): Promise<Response> {
             interviews.interview_name,
             interviews.interview_type,
             interviews.subject_id,
-            interviews.study_id
+            interviews.study_id,
+            interviews.interview_ra_md
     `;
 
     const countQuery = `SELECT COUNT(*) FROM (${baseQuery}) AS total_count`;

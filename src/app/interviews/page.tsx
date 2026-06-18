@@ -25,6 +25,7 @@ export default function Interviews() {
         { field: 'interview_type', headerName: 'Interview Type', width: 150 },
         { field: 'subject_id', headerName: 'Subject ID', width: 150 },
         { field: 'study_id', headerName: 'Study ID', width: 150 },
+        { field: 'interview_ra_md', headerName: 'RA/MD', width: 120 },
         { field: 'interview_day', headerName: 'Day', width: 80 },
         {
             field: 'interview_datetime',
@@ -48,6 +49,7 @@ export default function Interviews() {
                     interview_type: interview.interview_type,
                     subject_id: interview.subject_id,
                     study_id: interview.study_id,
+                    interview_ra_md: interview.interview_ra_md,
                     interview_day: interview.interview_day,
                     interview_datetime: interview.interview_datetime,
                 }));

@@ -12,6 +12,7 @@ export type DbInterviewEnhanced = {
     interview_type: string;
     subject_id: string;
     study_id: string;
+    interview_ra_md: string;
     interview_day: number;
     interview_datetime: Date;
 };
